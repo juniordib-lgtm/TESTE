@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ZapAgendado" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#0B141A</item>
+        <item name="android:navigationBarColor">#0B141A</item>
+    </style>
+
+    <style name="Theme.Invisivel" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

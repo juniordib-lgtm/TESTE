@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zap Agendado</string>
+    <string name="auto_envio_label">Zap Agendado — envio automático</string>
+    <string name="auto_envio_desc">Toca no botão enviar do WhatsApp quando um agendamento seu dispara. Fica inativo o resto do tempo.</string>
+</resources>
