@@ -32,6 +32,11 @@ const UIAtividades = (() => {
     const real = a.inicioReal
       ? (a.fimReal ? `✅ Real: ${formatDateTime(a.inicioReal)} → ${formatDateTime(a.fimReal)}` : `▶ Real: iniciado em ${formatDateTime(a.inicioReal)} (em andamento)`)
       : null;
+    const pred = a.predecessoraId ? State.getAtividade(a.predecessoraId) : null;
+    const qtdSucessoras = State.sucessorasDiretas(a.id).length;
+    const dependencia = (pred || qtdSucessoras > 0)
+      ? `${pred ? `🔗 Após: ${escapeHtml(pred.nome)}${a.defasagemHoras ? ` (+${a.defasagemHoras}h)` : ''}` : ''}${pred && qtdSucessoras > 0 ? ' · ' : ''}${qtdSucessoras > 0 ? `➜ ${qtdSucessoras} atividade(s) dependem desta` : ''}`
+      : null;
     return `
       <div class="atividade-item ${isSub ? 'sub' : ''}" data-id="${a.id}">
         <div class="atividade-head">
@@ -57,7 +62,7 @@ const UIAtividades = (() => {
             <div class="progress-bar"><div style="width:${a.progresso || 0}%"></div></div> ${a.progresso || 0}%
           </span>
         </div>
-        ${real ? `<div class="atividade-info"><span>${real}</span></div>` : ''}
+        ${(real || dependencia) ? `<div class="atividade-info">${real ? `<span>${real}</span>` : ''}${dependencia ? `<span>${dependencia}</span>` : ''}</div>` : ''}
       </div>
       ${subHtml}
     `;
@@ -95,8 +100,11 @@ const UIAtividades = (() => {
       duracaoHoras: 8,
       dataFim: '',
       inicioReal: '', fimReal: '',
+      predecessoraId: '', defasagemHoras: 0,
       imagens: [], recursos: []
     };
+    if (atividade.defasagemHoras === undefined || atividade.defasagemHoras === null) atividade.defasagemHoras = 0;
+    if (!atividade.predecessoraId) atividade.predecessoraId = '';
     const calendario = State.calendarioDaAtividade(atividade) || State.getCalendario(parada.calendarioId);
 
     // normaliza datas para o formato aceito por <input type="datetime-local">
@@ -112,6 +120,12 @@ const UIAtividades = (() => {
 
     const opcoesPai = State.listarAtividadesDaParada(parada.id)
       .filter(a => !a.parentId && a.id !== atividade.id);
+
+    // não pode escolher como predecessora a própria atividade nem quem já depende dela (evita ciclo)
+    const idsIndisponiveisComoPredecessora = atividade.id ? State.cadeiaSucessoras(atividade.id) : new Set();
+    const opcoesPredecessora = State.listarAtividadesDaParada(parada.id)
+      .filter(a => !idsIndisponiveisComoPredecessora.has(a.id));
+    const sucessoras = atividade.id ? State.sucessorasDiretas(atividade.id) : [];
 
     let imagensAtual = (atividade.imagens || []).slice();
     let recursosAtual = (atividade.recursos || []).map(r => ({ ...r }));
@@ -166,6 +180,28 @@ const UIAtividades = (() => {
             <textarea name="descricao">${escapeHtml(atividade.descricao || '')}</textarea>
           </div>
         </div>
+
+        <fieldset class="mt-8">
+          <legend>Sequenciamento</legend>
+          <p class="hint" style="margin:0 0 8px;">Ligue esta atividade a uma predecessora para que a Data/Hora Início seja calculada sozinha (fim da predecessora + defasagem) e acompanhe automaticamente qualquer mudança nela — sem precisar editar tarefa por tarefa.</p>
+          <div class="form-grid">
+            <div class="form-field full">
+              <label>Atividade predecessora</label>
+              <select name="predecessoraId">
+                <option value="">— Nenhuma (Data/Hora Início manual) —</option>
+                ${opcoesPredecessora.map(o => `<option value="${o.id}" ${atividade.predecessoraId === o.id ? 'selected' : ''}>${escapeHtml(o.nome)} (fim: ${formatDateTime(o.dataFim)})</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Defasagem após a predecessora (horas)</label>
+              <input type="number" name="defasagemHoras" step="0.5" value="${atividade.defasagemHoras}">
+            </div>
+            <div class="form-field full">
+              <label>Sucessoras (dependem desta atividade)</label>
+              <input type="text" readonly value="${sucessoras.length ? sucessoras.map(s => s.nome).join(', ') : 'nenhuma'}">
+            </div>
+          </div>
+        </fieldset>
 
         <fieldset class="mt-8">
           <legend>Execução real</legend>
@@ -227,6 +263,29 @@ const UIAtividades = (() => {
       inputInicio.addEventListener('input', () => { if (modoCalculo === 'duracao') recalcularFim(); else recalcularDuracao(); });
       inputDuracao.addEventListener('input', () => { modoCalculo = 'duracao'; recalcularFim(); });
       inputFim.addEventListener('input', () => { modoCalculo = 'fim'; recalcularDuracao(); });
+
+      // ---- Predecessora ----
+      const selectPredecessora = box.querySelector('[name="predecessoraId"]');
+      const inputDefasagem = box.querySelector('[name="defasagemHoras"]');
+      function aplicarPredecessora() {
+        const predId = selectPredecessora.value;
+        if (predId) {
+          const pred = State.getAtividade(predId);
+          inputInicio.readOnly = true;
+          if (pred && pred.dataFim) {
+            const lag = Number(inputDefasagem.value) || 0;
+            const novoInicio = new Date(new Date(pred.dataFim).getTime() + lag * 3600000);
+            inputInicio.value = toInputDateTime(novoInicio);
+          }
+          modoCalculo = 'duracao';
+          recalcularFim();
+        } else {
+          inputInicio.readOnly = false;
+        }
+      }
+      selectPredecessora.addEventListener('change', aplicarPredecessora);
+      inputDefasagem.addEventListener('input', aplicarPredecessora);
+      aplicarPredecessora();
 
       // ---- Execução real ----
       const inputInicioReal = box.querySelector('[name="inicioReal"]');
@@ -334,6 +393,8 @@ const UIAtividades = (() => {
           dataFim: dataFimDate ? dataFimDate.toISOString() : null,
           inicioReal: inicioRealDate ? inicioRealDate.toISOString() : null,
           fimReal: fimRealDate ? fimRealDate.toISOString() : null,
+          predecessoraId: fd.get('predecessoraId') || null,
+          defasagemHoras: Number(fd.get('defasagemHoras')) || 0,
           descricao: fd.get('descricao').trim(),
           ordem: atividade.ordem,
           imagens: imagensAtual,

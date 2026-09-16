@@ -67,11 +67,15 @@ const UIRelatorios = (() => {
       const recursos = a.recursos || [];
       const imagens = a.imagens || [];
       const custo = recursos.reduce((acc, r) => acc + (Number(r.quantidade) || 0) * (Number(r.custoUnitario) || 0), 0);
+      const pred = a.predecessoraId ? State.getAtividade(a.predecessoraId) : null;
+      const sucessoras = State.sucessorasDiretas(a.id);
       return `
         <div style="margin-left:${nivel * 22}px; padding:12px 0; border-bottom:1px solid #e2e8f0;">
           <h4 style="margin-bottom:4px;">${nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)} <span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span></h4>
           <p class="text-muted" style="margin:2px 0;">Responsável: ${escapeHtml(a.responsavel || '—')} · Área: ${escapeHtml(a.area || '—')}</p>
           <p class="text-muted" style="margin:2px 0;">Planejado: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} · Duração: ${formatHoras(a.duracaoHoras)} · Progresso: ${a.progresso || 0}%</p>
+          ${pred ? `<p class="text-muted" style="margin:2px 0;">🔗 Predecessora: ${escapeHtml(pred.nome)}${a.defasagemHoras ? ` (+${a.defasagemHoras}h de defasagem)` : ''} — início calculado automaticamente</p>` : ''}
+          ${sucessoras.length ? `<p class="text-muted" style="margin:2px 0;">➜ Sucessoras: ${sucessoras.map(s => escapeHtml(s.nome)).join(', ')}</p>` : ''}
           ${a.inicioReal ? `<p class="text-muted" style="margin:2px 0;">Execução real: ${formatDateTime(a.inicioReal)} → ${a.fimReal ? formatDateTime(a.fimReal) : 'em andamento'}${a.fimReal ? ` (${formatHoras(State.duracaoRealHoras(a))})` : ''}</p>` : ''}
           ${a.descricao ? `<p style="margin:6px 0;">${escapeHtml(a.descricao)}</p>` : ''}
           ${recursos.length ? `

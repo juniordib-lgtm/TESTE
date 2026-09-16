@@ -7,6 +7,7 @@ const UITabela = (() => {
     { key: 'responsavel', label: 'Responsável' },
     { key: 'area', label: 'Área' },
     { key: 'statusLabel', label: 'Status' },
+    { key: 'predecessoraNome', label: 'Predecessora' },
     { key: 'dataInicio', label: 'Início planejado' },
     { key: 'dataFim', label: 'Fim planejado' },
     { key: 'duracaoHoras', label: 'Duração planejada' },
@@ -23,13 +24,17 @@ const UITabela = (() => {
   function linhasBase() {
     const parada = State.getParadaAtiva();
     if (!parada) return [];
-    return State.listarAtividadesDaParada(parada.id).map(a => ({
-      ...a,
-      tipoLabel: a.parentId ? 'Sub-atividade' : 'Atividade',
-      statusLabel: STATUS_LABELS[a.status] || a.status,
-      qtdRecursos: (a.recursos || []).length,
-      qtdImagens: (a.imagens || []).length
-    }));
+    return State.listarAtividadesDaParada(parada.id).map(a => {
+      const pred = a.predecessoraId ? State.getAtividade(a.predecessoraId) : null;
+      return {
+        ...a,
+        tipoLabel: a.parentId ? 'Sub-atividade' : 'Atividade',
+        statusLabel: STATUS_LABELS[a.status] || a.status,
+        predecessoraNome: pred ? pred.nome : '',
+        qtdRecursos: (a.recursos || []).length,
+        qtdImagens: (a.imagens || []).length
+      };
+    });
   }
 
   function aplicarFiltros(linhas) {
@@ -95,6 +100,7 @@ const UITabela = (() => {
           <td>${escapeHtml(l.responsavel || '—')}</td>
           <td>${escapeHtml(l.area || '—')}</td>
           <td><span class="badge badge-${l.status}">${l.statusLabel}</span></td>
+          <td>${l.predecessoraNome ? `🔗 ${escapeHtml(l.predecessoraNome)}${l.defasagemHoras ? ` (+${l.defasagemHoras}h)` : ''}` : '—'}</td>
           <td>${formatDateTime(l.dataInicio)}</td>
           <td>${formatDateTime(l.dataFim)}</td>
           <td>${formatHoras(l.duracaoHoras)}</td>
@@ -125,7 +131,7 @@ const UITabela = (() => {
 
     const linhas = ordenar(aplicarFiltros(linhasBase()));
     const colunasAtividades = [
-      'Atividade', 'Tipo', 'Responsável', 'Área', 'Status',
+      'Atividade', 'Tipo', 'Responsável', 'Área', 'Status', 'Predecessora', 'Defasagem (h)',
       'Início planejado', 'Fim planejado', 'Duração planejada (h)',
       'Início real', 'Fim real', 'Duração real (h)',
       'Progresso (%)', 'Recursos', 'Imagens', 'Descrição'
@@ -133,6 +139,7 @@ const UITabela = (() => {
     const linhasAtividades = linhas.map(l => [
       (l.parentId ? '↳ ' : '') + (l.nome || ''),
       l.tipoLabel, l.responsavel || '', l.area || '', l.statusLabel,
+      l.predecessoraNome || '', l.predecessoraNome ? (Number(l.defasagemHoras) || 0) : '',
       formatDateTime(l.dataInicio), formatDateTime(l.dataFim), Number(l.duracaoHoras) || 0,
       l.inicioReal ? formatDateTime(l.inicioReal) : '', l.fimReal ? formatDateTime(l.fimReal) : '',
       State.duracaoRealHoras(l) ?? '',

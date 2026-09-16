@@ -181,6 +181,7 @@ main#conteudo { padding: 20px; max-width: 1400px; margin: 0 auto; }
 }
 .form-field textarea { resize: vertical; min-height: 60px; }
 .form-field.readonly input { background: #f1f5f9; color: var(--text-muted); }
+.form-field input[readonly] { background: #f1f5f9; color: var(--text-muted); }
 
 fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 4px; }
 legend { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 0 6px; }

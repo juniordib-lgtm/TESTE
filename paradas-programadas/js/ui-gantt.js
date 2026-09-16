@@ -75,12 +75,17 @@ const UIGantt = (() => {
       return `<div class="gantt-bar-real ${emAndamento ? 'em-andamento' : ''}" style="${barraStyle(ini, fim)}" title="${escapeHtml(a.nome)} — ${titulo}"></div>`;
     }
 
-    const linhasHtml = linhas.map(a => { const nivel = a.nivel; return `
+    const linhasHtml = linhas.map(a => {
+      const nivel = a.nivel;
+      const pred = a.predecessoraId ? State.getAtividade(a.predecessoraId) : null;
+      const tituloBase = `${escapeHtml(a.nome)}: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} (${formatHoras(a.duracaoHoras)}, ${a.progresso || 0}%)`;
+      const tituloPred = pred ? ` — após ${escapeHtml(pred.nome)}${a.defasagemHoras ? ` +${a.defasagemHoras}h` : ''}` : '';
+      return `
       <div class="gantt-row" data-id="${a.id}">
-        <div class="gantt-row-label ${nivel > 0 ? 'sub' : ''}" title="${escapeHtml(a.nome)}">${nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)}</div>
+        <div class="gantt-row-label ${nivel > 0 ? 'sub' : ''}" title="${escapeHtml(a.nome)}">${nivel > 0 ? '↳ ' : ''}${pred ? '🔗 ' : ''}${escapeHtml(a.nome)}</div>
         <div class="gantt-timeline" style="width:${totalWidth}px">
           <div class="gantt-daycols">${daycolsHtml}</div>
-          <div class="gantt-bar status-${a.status}" style="${barraStyle(new Date(a.dataInicio), new Date(a.dataFim))}" title="${escapeHtml(a.nome)}: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} (${formatHoras(a.duracaoHoras)}, ${a.progresso || 0}%)">
+          <div class="gantt-bar status-${a.status}" style="${barraStyle(new Date(a.dataInicio), new Date(a.dataFim))}" title="${tituloBase}${tituloPred}">
             <div class="gantt-bar-progress" style="width:${a.progresso || 0}%"></div>
             <span style="position:relative;">${escapeHtml(a.nome)}</span>
           </div>

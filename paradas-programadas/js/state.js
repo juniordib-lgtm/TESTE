@@ -48,6 +48,8 @@ const State = (() => {
       if (!a.status) a.status = 'planejada';
       if (a.inicioReal === undefined) a.inicioReal = null;
       if (a.fimReal === undefined) a.fimReal = null;
+      if (a.predecessoraId === undefined) a.predecessoraId = null;
+      if (a.defasagemHoras === undefined) a.defasagemHoras = 0;
     });
     return d;
   }
@@ -83,7 +85,7 @@ const State = (() => {
       data.paradas.push(parada);
       if (!data.paradaAtivaId) data.paradaAtivaId = parada.id;
     }
-    recalcularAtividadesDaParada(parada.id);
+    recalcularProgramacao(parada.id);
     persist();
     return parada;
   }
@@ -107,7 +109,7 @@ const State = (() => {
     if (idx >= 0) data.calendarios[idx] = cal;
     else { cal.id = cal.id || uid(); data.calendarios.push(cal); }
     // qualquer parada usando esse calendário precisa recalcular datas
-    data.paradas.filter(p => p.calendarioId === cal.id).forEach(p => recalcularAtividadesDaParada(p.id));
+    data.paradas.filter(p => p.calendarioId === cal.id).forEach(p => recalcularProgramacao(p.id));
     persist();
     return cal;
   }
@@ -193,14 +195,17 @@ const State = (() => {
    * duracaoHoras). Default: 'duracao'.
    */
   function salvarAtividade(atividade, modoCalculo = 'duracao') {
-    const calendario = calendarioDaAtividade(atividade);
-    const inicio = new Date(atividade.dataInicio);
-
-    if (modoCalculo === 'fim' && atividade.dataFim) {
-      atividade.duracaoHoras = calcularDuracaoHoras(inicio, new Date(atividade.dataFim), calendario);
-    } else {
-      const fim = calcularDataFim(inicio, Number(atividade.duracaoHoras) || 0, calendario);
-      atividade.dataFim = fim ? fim.toISOString() : null;
+    // Com predecessora definida, a Data Início é derivada automaticamente pela
+    // cadeia (recalcularProgramacao, logo abaixo) — o que foi digitado aqui é ignorado.
+    if (!atividade.predecessoraId) {
+      const calendario = calendarioDaAtividade(atividade);
+      const inicio = new Date(atividade.dataInicio);
+      if (modoCalculo === 'fim' && atividade.dataFim) {
+        atividade.duracaoHoras = calcularDuracaoHoras(inicio, new Date(atividade.dataFim), calendario);
+      } else {
+        const fim = calcularDataFim(inicio, Number(atividade.duracaoHoras) || 0, calendario);
+        atividade.dataFim = fim ? fim.toISOString() : null;
+      }
     }
 
     const idx = data.atividades.findIndex(a => a.id === atividade.id);
@@ -213,11 +218,13 @@ const State = (() => {
       if (!Array.isArray(atividade.recursos)) atividade.recursos = [];
       data.atividades.push(atividade);
     }
+    recalcularProgramacao(atividade.paradaId);
     persist();
     return atividade;
   }
 
   function excluirAtividade(id) {
+    const alvo = getAtividade(id);
     // exclui também as sub-atividades
     const idsParaExcluir = new Set([id]);
     let mudou = true;
@@ -230,19 +237,63 @@ const State = (() => {
         }
       });
     }
+    // atividades que dependiam de algo removido passam a ter data/hora manual (mantém o último valor calculado)
+    data.atividades.forEach(a => {
+      if (a.predecessoraId && idsParaExcluir.has(a.predecessoraId)) a.predecessoraId = null;
+    });
     data.atividades = data.atividades.filter(a => !idsParaExcluir.has(a.id));
+    if (alvo) recalcularProgramacao(alvo.paradaId);
     persist();
   }
 
-  function recalcularAtividadesDaParada(paradaId) {
-    const calendario = (() => {
-      const p = getParada(paradaId);
-      return p ? getCalendario(p.calendarioId) : calendarioPadrao();
-    })();
-    listarAtividadesDaParada(paradaId).forEach(a => {
-      const fim = calcularDataFim(new Date(a.dataInicio), Number(a.duracaoHoras) || 0, calendario);
+  // ---------- Predecessoras / sucessoras ----------
+
+  /** Atividades (da mesma parada) que têm `atividadeId` como predecessora direta. */
+  function sucessorasDiretas(atividadeId) {
+    return data.atividades.filter(a => a.predecessoraId === atividadeId);
+  }
+
+  /** IDs de `atividadeId` + todas as suas sucessoras diretas/indiretas (cadeia completa). */
+  function cadeiaSucessoras(atividadeId, visitados = new Set()) {
+    if (visitados.has(atividadeId)) return visitados;
+    visitados.add(atividadeId);
+    sucessorasDiretas(atividadeId).forEach(s => cadeiaSucessoras(s.id, visitados));
+    return visitados;
+  }
+
+  /**
+   * Recalcula Data Início/Fim de todas as atividades de uma parada, respeitando a
+   * cadeia de predecessoras: quem tem predecessora tem sua Data Início derivada
+   * automaticamente de "Data Fim da predecessora + defasagem"; quem não tem
+   * predecessora mantém a Data Início que foi digitada manualmente. Percorre a
+   * cadeia em profundidade (predecessora antes de sucessora) para propagar
+   * mudanças em cascata, e se protege contra referência circular.
+   */
+  function recalcularProgramacao(paradaId) {
+    const parada = getParada(paradaId);
+    const calendario = parada ? getCalendario(parada.calendarioId) : calendarioPadrao();
+    const todas = listarAtividadesDaParada(paradaId);
+    const porId = new Map(todas.map(a => [a.id, a]));
+    const processadas = new Set();
+
+    function processar(a, pilha) {
+      if (!a || processadas.has(a.id) || pilha.has(a.id)) return;
+      pilha.add(a.id);
+      if (a.predecessoraId && porId.has(a.predecessoraId)) {
+        const pred = porId.get(a.predecessoraId);
+        processar(pred, pilha);
+        if (pred.dataFim) {
+          const lag = Number(a.defasagemHoras) || 0;
+          a.dataInicio = new Date(new Date(pred.dataFim).getTime() + lag * 3600000).toISOString();
+        }
+      }
+      const fim = a.dataInicio ? calcularDataFim(new Date(a.dataInicio), Number(a.duracaoHoras) || 0, calendario) : null;
       a.dataFim = fim ? fim.toISOString() : null;
-    });
+      processadas.add(a.id);
+      pilha.delete(a.id);
+    }
+
+    todas.forEach(a => processar(a, new Set()));
   }
 
   // ---------- Estatísticas ----------
@@ -269,6 +320,7 @@ const State = (() => {
     listarParadas, getParada, getParadaAtiva, setParadaAtiva, salvarParada, excluirParada,
     listarCalendarios, getCalendario, salvarCalendario, excluirCalendario,
     listarAtividadesDaParada, arvoreAtividades, listaAchatada, getAtividade, salvarAtividade, excluirAtividade,
-    calendarioDaAtividade, faixaDataParada, duracaoRealHoras
+    calendarioDaAtividade, faixaDataParada, duracaoRealHoras,
+    sucessorasDiretas, cadeiaSucessoras, recalcularProgramacao
   };
 })();
