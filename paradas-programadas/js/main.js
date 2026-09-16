@@ -45,7 +45,10 @@
 
     document.getElementById('gantt-zoom').addEventListener('change', () => UIGantt.render());
 
-    document.getElementById('btn-pasta').addEventListener('click', () => Storage.escolherPasta());
+    document.getElementById('btn-pasta').addEventListener('click', () => Storage.conectarPastaSalva());
+    document.getElementById('btn-trocar-pasta').addEventListener('click', () => {
+      if (confirm('Selecionar uma pasta diferente para salvar os dados a partir de agora?')) Storage.escolherPasta();
+    });
 
     document.getElementById('btn-exportar').addEventListener('click', () => {
       Storage.exportJson(State.getData());

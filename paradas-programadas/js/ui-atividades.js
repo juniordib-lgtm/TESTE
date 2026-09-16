@@ -29,6 +29,9 @@ const UIAtividades = (() => {
     const imgs = (a.imagens || []).length;
     const recs = (a.recursos || []).length;
     const subHtml = (a.subAtividades || []).map(s => itemHtml(s, true)).join('');
+    const real = a.inicioReal
+      ? (a.fimReal ? `✅ Real: ${formatDateTime(a.inicioReal)} → ${formatDateTime(a.fimReal)}` : `▶ Real: iniciado em ${formatDateTime(a.inicioReal)} (em andamento)`)
+      : null;
     return `
       <div class="atividade-item ${isSub ? 'sub' : ''}" data-id="${a.id}">
         <div class="atividade-head">
@@ -39,13 +42,14 @@ const UIAtividades = (() => {
           </div>
           <div class="atividade-actions">
             ${!isSub ? `<button class="btn btn-secondary btn-small" data-action="nova-sub">+ Sub-atividade</button>` : ''}
+            ${imgs > 0 ? `<button class="btn btn-secondary btn-small" data-action="ver-imagens">🖼 Ver imagens (${imgs})</button>` : ''}
             <button class="btn btn-secondary btn-small" data-action="editar">Editar</button>
             <button class="btn btn-danger btn-small" data-action="excluir">Excluir</button>
           </div>
         </div>
         <div class="atividade-info">
           <span>👤 ${escapeHtml(a.responsavel || '—')}</span>
-          <span>🗓 ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)}</span>
+          <span>🗓 Planejado: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)}</span>
           <span>⏱ ${formatHoras(a.duracaoHoras)}</span>
           <span>🧰 ${recs} recurso(s)</span>
           <span>🖼 ${imgs} imagem(ns)</span>
@@ -53,6 +57,7 @@ const UIAtividades = (() => {
             <div class="progress-bar"><div style="width:${a.progresso || 0}%"></div></div> ${a.progresso || 0}%
           </span>
         </div>
+        ${real ? `<div class="atividade-info"><span>${real}</span></div>` : ''}
       </div>
       ${subHtml}
     `;
@@ -63,6 +68,11 @@ const UIAtividades = (() => {
       const id = item.dataset.id;
       const btnSub = item.querySelector('[data-action="nova-sub"]');
       if (btnSub) btnSub.addEventListener('click', () => abrirFormAtividade(null, id));
+      const btnImagens = item.querySelector('[data-action="ver-imagens"]');
+      if (btnImagens) btnImagens.addEventListener('click', () => {
+        const at = State.getAtividade(id);
+        UIImagens.abrirGaleria(at.nome, at.imagens);
+      });
       item.querySelector('[data-action="editar"]').addEventListener('click', () => abrirFormAtividade(State.getAtividade(id)));
       item.querySelector('[data-action="excluir"]').addEventListener('click', () => {
         if (confirm('Excluir esta atividade (e sub-atividades, se houver)?')) {
@@ -84,6 +94,7 @@ const UIAtividades = (() => {
       dataInicio: toInputDateTime(new Date()),
       duracaoHoras: 8,
       dataFim: '',
+      inicioReal: '', fimReal: '',
       imagens: [], recursos: []
     };
     const calendario = State.calendarioDaAtividade(atividade) || State.getCalendario(parada.calendarioId);
@@ -96,6 +107,8 @@ const UIAtividades = (() => {
       const fim = calcularDataFim(fromInputDateTime(atividade.dataInicio) || new Date(atividade.dataInicio), Number(atividade.duracaoHoras) || 0, calendario);
       atividade.dataFim = fim ? toInputDateTime(fim) : '';
     }
+    atividade.inicioReal = atividade.inicioReal ? toInputDateTime(atividade.inicioReal) : '';
+    atividade.fimReal = atividade.fimReal ? toInputDateTime(atividade.fimReal) : '';
 
     const opcoesPai = State.listarAtividadesDaParada(parada.id)
       .filter(a => !a.parentId && a.id !== atividade.id);
@@ -155,6 +168,25 @@ const UIAtividades = (() => {
         </div>
 
         <fieldset class="mt-8">
+          <legend>Execução real</legend>
+          <p class="hint" style="margin:0 0 8px;">Preencha conforme a atividade realmente acontece, para comparar planejado × real. Deixe em branco enquanto não iniciada.</p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Início real</label>
+              <input type="datetime-local" name="inicioReal" value="${atividade.inicioReal}">
+            </div>
+            <div class="form-field">
+              <label>Fim real</label>
+              <input type="datetime-local" name="fimReal" value="${atividade.fimReal}">
+            </div>
+            <div class="form-field full readonly">
+              <label>Duração real (calculada)</label>
+              <input type="text" id="duracao-real-display" readonly value="—">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="mt-8">
           <legend>Recursos</legend>
           <div id="recursos-list" class="recursos-list"></div>
           <button type="button" class="btn btn-secondary btn-small" id="btn-add-recurso">+ Adicionar recurso</button>
@@ -163,6 +195,7 @@ const UIAtividades = (() => {
         <fieldset class="mt-8">
           <legend>Imagens</legend>
           <input type="file" id="input-imagens" accept="image/*" multiple>
+          <p class="hint" style="margin:6px 0 0;">Clique em uma miniatura para pré-visualizar em tamanho maior.</p>
           <div id="imagens-grid" class="imagens-grid"></div>
         </fieldset>
 
@@ -194,6 +227,25 @@ const UIAtividades = (() => {
       inputInicio.addEventListener('input', () => { if (modoCalculo === 'duracao') recalcularFim(); else recalcularDuracao(); });
       inputDuracao.addEventListener('input', () => { modoCalculo = 'duracao'; recalcularFim(); });
       inputFim.addEventListener('input', () => { modoCalculo = 'fim'; recalcularDuracao(); });
+
+      // ---- Execução real ----
+      const inputInicioReal = box.querySelector('[name="inicioReal"]');
+      const inputFimReal = box.querySelector('[name="fimReal"]');
+      const duracaoRealDisplay = box.querySelector('#duracao-real-display');
+      function recalcularDuracaoReal() {
+        const ini = fromInputDateTime(inputInicioReal.value);
+        const fim = fromInputDateTime(inputFimReal.value);
+        if (ini && fim) {
+          duracaoRealDisplay.value = formatHoras(calcularDuracaoHoras(ini, fim, calendario));
+        } else if (ini && !fim) {
+          duracaoRealDisplay.value = 'em andamento';
+        } else {
+          duracaoRealDisplay.value = '—';
+        }
+      }
+      inputInicioReal.addEventListener('input', recalcularDuracaoReal);
+      inputFimReal.addEventListener('input', recalcularDuracaoReal);
+      recalcularDuracaoReal();
 
       // ---- Recursos ----
       const recursosList = box.querySelector('#recursos-list');
@@ -235,10 +287,17 @@ const UIAtividades = (() => {
             <button type="button" class="img-remover" title="Remover">✕</button>
           </div>`).join('');
         imagensGrid.querySelectorAll('.img-remover').forEach(btn => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const i = Number(btn.closest('.imagem-thumb').dataset.i);
             imagensAtual.splice(i, 1);
             renderImagens();
+          });
+        });
+        imagensGrid.querySelectorAll('.imagem-thumb img').forEach(imgEl => {
+          imgEl.addEventListener('click', () => {
+            const i = Number(imgEl.closest('.imagem-thumb').dataset.i);
+            UIImagens.abrirGaleria(atividade.nome || 'Imagens', imagensAtual, i);
           });
         });
       }
@@ -259,6 +318,8 @@ const UIAtividades = (() => {
         const fd = new FormData(e.target);
         const dataInicioDate = fromInputDateTime(fd.get('dataInicio'));
         const dataFimDate = fromInputDateTime(fd.get('dataFim'));
+        const inicioRealDate = fromInputDateTime(fd.get('inicioReal'));
+        const fimRealDate = fromInputDateTime(fd.get('fimReal'));
         const payload = {
           id: atividade.id,
           paradaId: parada.id,
@@ -271,6 +332,8 @@ const UIAtividades = (() => {
           dataInicio: dataInicioDate ? dataInicioDate.toISOString() : null,
           duracaoHoras: Number(fd.get('duracaoHoras')) || 0,
           dataFim: dataFimDate ? dataFimDate.toISOString() : null,
+          inicioReal: inicioRealDate ? inicioRealDate.toISOString() : null,
+          fimReal: fimRealDate ? fimRealDate.toISOString() : null,
           descricao: fd.get('descricao').trim(),
           ordem: atividade.ordem,
           imagens: imagensAtual,

@@ -24,15 +24,17 @@ const UIRelatorios = (() => {
   // ---------------- Relatório Simplificado ----------------
 
   function relatorioSimplificado(parada) {
-    const linhas = State.listarAtividadesDaParada(parada.id);
+    const linhas = State.listaAchatada(parada.id);
     const corpo = linhas.map(a => `
       <tr>
-        <td>${a.parentId ? '↳ ' : ''}${escapeHtml(a.nome)}</td>
+        <td>${a.nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)}</td>
         <td>${escapeHtml(a.responsavel || '—')}</td>
         <td><span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span></td>
         <td>${formatDateTime(a.dataInicio)}</td>
         <td>${formatDateTime(a.dataFim)}</td>
         <td>${formatHoras(a.duracaoHoras)}</td>
+        <td>${a.inicioReal ? formatDateTime(a.inicioReal) : '—'}</td>
+        <td>${a.fimReal ? formatDateTime(a.fimReal) : '—'}</td>
         <td>${a.progresso || 0}%</td>
       </tr>`).join('');
 
@@ -43,13 +45,15 @@ const UIRelatorios = (() => {
             <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Atividade</th>
             <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Responsável</th>
             <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Status</th>
-            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Início</th>
-            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Fim</th>
+            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Início plan.</th>
+            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Fim plan.</th>
             <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Duração</th>
+            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Início real</th>
+            <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Fim real</th>
             <th style="text-align:left; padding:6px; border-bottom:2px solid #e2e8f0;">Progr.</th>
           </tr>
         </thead>
-        <tbody>${corpo || `<tr><td colspan="7">Nenhuma atividade cadastrada.</td></tr>`}</tbody>
+        <tbody>${corpo || `<tr><td colspan="9">Nenhuma atividade cadastrada.</td></tr>`}</tbody>
       </table>
     `;
   }
@@ -67,7 +71,8 @@ const UIRelatorios = (() => {
         <div style="margin-left:${nivel * 22}px; padding:12px 0; border-bottom:1px solid #e2e8f0;">
           <h4 style="margin-bottom:4px;">${nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)} <span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span></h4>
           <p class="text-muted" style="margin:2px 0;">Responsável: ${escapeHtml(a.responsavel || '—')} · Área: ${escapeHtml(a.area || '—')}</p>
-          <p class="text-muted" style="margin:2px 0;">Início: ${formatDateTime(a.dataInicio)} · Fim: ${formatDateTime(a.dataFim)} · Duração: ${formatHoras(a.duracaoHoras)} · Progresso: ${a.progresso || 0}%</p>
+          <p class="text-muted" style="margin:2px 0;">Planejado: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} · Duração: ${formatHoras(a.duracaoHoras)} · Progresso: ${a.progresso || 0}%</p>
+          ${a.inicioReal ? `<p class="text-muted" style="margin:2px 0;">Execução real: ${formatDateTime(a.inicioReal)} → ${a.fimReal ? formatDateTime(a.fimReal) : 'em andamento'}${a.fimReal ? ` (${formatHoras(State.duracaoRealHoras(a))})` : ''}</p>` : ''}
           ${a.descricao ? `<p style="margin:6px 0;">${escapeHtml(a.descricao)}</p>` : ''}
           ${recursos.length ? `
             <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;">
@@ -114,6 +119,43 @@ const UIRelatorios = (() => {
     return cabecalho('Relatório Gantt', parada) + `<div class="gantt-container" style="border:none;">${ganttHtml}</div>`;
   }
 
+  // ---------------- Relatório com Imagens ----------------
+
+  function relatorioImagens(parada) {
+    const arvore = State.arvoreAtividades(parada.id);
+    const comImagem = [];
+    const semImagem = [];
+    (function coletar(lista, nivel) {
+      lista.forEach(a => {
+        if ((a.imagens || []).length > 0) comImagem.push({ a, nivel });
+        else semImagem.push({ a, nivel });
+        coletar(a.subAtividades || [], nivel + 1);
+      });
+    })(arvore, 0);
+
+    const blocos = comImagem.map(({ a, nivel }) => `
+      <div style="margin-left:${nivel * 22}px; padding:14px 0; border-bottom:1px solid #e2e8f0; page-break-inside: avoid;">
+        <h4 style="margin-bottom:4px;">${nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)} <span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span></h4>
+        <p class="text-muted" style="margin:2px 0;">Responsável: ${escapeHtml(a.responsavel || '—')} · Planejado: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)}</p>
+        <div class="imagens-grid" style="margin-top:8px;">
+          ${a.imagens.map(img => `
+            <div style="text-align:center;">
+              <div class="imagem-thumb" style="width:170px; height:170px;"><img src="${img.dataUrl}" alt="${escapeHtml(img.nome)}"></div>
+              <div class="text-muted" style="font-size:11px; margin-top:2px; max-width:170px;">${escapeHtml(img.nome || '')}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    const listaSemImagem = semImagem.length
+      ? `<p class="text-muted mt-8">Sem imagens anexadas: ${semImagem.map(({ a }) => escapeHtml(a.nome)).join(', ')}.</p>`
+      : '';
+
+    return cabecalho('Relatório com Imagens', parada) +
+      (comImagem.length ? blocos : '<p>Nenhuma atividade possui imagens anexadas.</p>') +
+      listaSemImagem;
+  }
+
   // ---------------- Wiring ----------------
 
   function exibir(gerarFn) {
@@ -135,6 +177,7 @@ const UIRelatorios = (() => {
     document.getElementById('btn-rel-simples').addEventListener('click', () => exibir(relatorioSimplificado));
     document.getElementById('btn-rel-completo').addEventListener('click', () => exibir(relatorioCompleto));
     document.getElementById('btn-rel-gantt').addEventListener('click', () => exibir(relatorioGantt));
+    document.getElementById('btn-rel-imagens').addEventListener('click', () => exibir(relatorioImagens));
   }
 
   return { render, wireBotoes };

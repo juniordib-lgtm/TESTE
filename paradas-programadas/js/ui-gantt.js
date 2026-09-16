@@ -2,16 +2,6 @@
 
 const UIGantt = (() => {
 
-  function flatList(paradaId) {
-    const arvore = State.arvoreAtividades(paradaId);
-    const out = [];
-    arvore.forEach(a => {
-      out.push({ atividade: a, nivel: 0 });
-      (a.subAtividades || []).forEach(s => out.push({ atividade: s, nivel: 1 }));
-    });
-    return out;
-  }
-
   function diasEntre(inicio, fim) {
     const dias = [];
     let cursor = new Date(inicio);
@@ -27,16 +17,22 @@ const UIGantt = (() => {
 
   /** Monta o HTML do grid do Gantt para uma parada. Reaproveitado pelo relatório Gantt. */
   function construirHtmlGantt(paradaId, zoom) {
-    const linhas = flatList(paradaId).filter(l => l.atividade.dataInicio && l.atividade.dataFim);
+    const linhas = State.listaAchatada(paradaId).filter(a => a.dataInicio && a.dataFim);
     if (linhas.length === 0) {
       return `<div class="empty-state">Nenhuma atividade com datas definidas para exibir no Gantt.</div>`;
     }
 
     let rangeInicio = null, rangeFim = null;
-    linhas.forEach(({ atividade: a }) => {
+    linhas.forEach(a => {
       const ini = new Date(a.dataInicio), fim = new Date(a.dataFim);
       if (!rangeInicio || ini < rangeInicio) rangeInicio = ini;
       if (!rangeFim || fim > rangeFim) rangeFim = fim;
+      if (a.inicioReal) {
+        const iniR = new Date(a.inicioReal);
+        const fimR = a.fimReal ? new Date(a.fimReal) : new Date();
+        if (iniR < rangeInicio) rangeInicio = iniR;
+        if (fimR > rangeFim) rangeFim = fimR;
+      }
     });
     rangeInicio = new Date(rangeInicio.getTime() - 43200000); // meio dia de folga
     rangeFim = new Date(rangeFim.getTime() + 43200000);
@@ -64,27 +60,41 @@ const UIGantt = (() => {
     const totalWidth = dias.length * colWidth;
     const msPorPixel = (rangeFim - rangeInicio) / totalWidth;
 
-    function barraStyle(a) {
-      const ini = new Date(a.dataInicio), fim = new Date(a.dataFim);
+    function barraStyle(ini, fim) {
       const left = (ini - rangeInicio) / msPorPixel;
       const width = Math.max(6, (fim - ini) / msPorPixel);
       return `left:${left}px; width:${width}px;`;
     }
 
-    const linhasHtml = linhas.map(({ atividade: a, nivel }) => `
+    function barraRealHtml(a) {
+      if (!a.inicioReal) return '';
+      const ini = new Date(a.inicioReal);
+      const fim = a.fimReal ? new Date(a.fimReal) : new Date();
+      const emAndamento = !a.fimReal;
+      const titulo = `Real: ${formatDateTime(a.inicioReal)} → ${a.fimReal ? formatDateTime(a.fimReal) : 'em andamento'}`;
+      return `<div class="gantt-bar-real ${emAndamento ? 'em-andamento' : ''}" style="${barraStyle(ini, fim)}" title="${escapeHtml(a.nome)} — ${titulo}"></div>`;
+    }
+
+    const linhasHtml = linhas.map(a => { const nivel = a.nivel; return `
       <div class="gantt-row" data-id="${a.id}">
         <div class="gantt-row-label ${nivel > 0 ? 'sub' : ''}" title="${escapeHtml(a.nome)}">${nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)}</div>
         <div class="gantt-timeline" style="width:${totalWidth}px">
           <div class="gantt-daycols">${daycolsHtml}</div>
-          <div class="gantt-bar status-${a.status}" style="${barraStyle(a)}" title="${escapeHtml(a.nome)}: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} (${formatHoras(a.duracaoHoras)}, ${a.progresso || 0}%)">
+          <div class="gantt-bar status-${a.status}" style="${barraStyle(new Date(a.dataInicio), new Date(a.dataFim))}" title="${escapeHtml(a.nome)}: ${formatDateTime(a.dataInicio)} → ${formatDateTime(a.dataFim)} (${formatHoras(a.duracaoHoras)}, ${a.progresso || 0}%)">
             <div class="gantt-bar-progress" style="width:${a.progresso || 0}%"></div>
             <span style="position:relative;">${escapeHtml(a.nome)}</span>
           </div>
+          ${barraRealHtml(a)}
         </div>
       </div>
-    `).join('');
+    `; }).join('');
 
     return `
+      <div class="gantt-legenda">
+        <span><i class="gantt-legenda-dot" style="background:#2563eb"></i> Planejado</span>
+        <span><i class="gantt-legenda-dot gantt-legenda-real"></i> Real (concluído)</span>
+        <span><i class="gantt-legenda-dot gantt-legenda-real em-andamento"></i> Real (em andamento)</span>
+      </div>
       <div class="gantt-grid">
         <div class="gantt-row header-row">
           <div class="gantt-row-label">Atividade</div>

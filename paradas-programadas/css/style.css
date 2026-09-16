@@ -199,6 +199,23 @@ legend { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 0
   background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%;
   width: 18px; height: 18px; font-size: 11px; cursor: pointer; line-height: 1;
 }
+.imagem-thumb img { cursor: zoom-in; }
+
+/* Lightbox / galeria de imagens */
+.lightbox { display: flex; align-items: center; gap: 8px; }
+.lightbox-main { flex: 1; text-align: center; background: #0f172a; border-radius: 8px; padding: 10px; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lightbox-main img { max-width: 100%; max-height: 55vh; border-radius: 4px; }
+.lightbox-caption { color: #cbd5e1; font-size: 12px; margin-top: 8px; }
+.lightbox-nav {
+  background: #1e293b; color: #fff; border: none; border-radius: 50%;
+  width: 36px; height: 36px; font-size: 20px; cursor: pointer; flex-shrink: 0;
+}
+.lightbox-nav:hover { background: #334155; }
+.lightbox-thumbs { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; }
+.lightbox-thumb { width: 54px; height: 54px; flex-shrink: 0; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; opacity: .6; }
+.lightbox-thumb.active { border-color: var(--primary); opacity: 1; }
+.lightbox-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.lightbox-overlay { z-index: 150; }
 
 /* Atividades list */
 .atividade-item {
@@ -243,7 +260,10 @@ tbody tr:hover { background: #f8fafc; }
 }
 .gantt-row.header-row .gantt-row-label { background: #f8fafc; }
 .gantt-row-label.sub { padding-left: 26px; color: var(--text-muted); }
-.gantt-timeline { position: relative; min-height: 30px; }
+.gantt-legenda { display: flex; gap: 16px; padding: 8px 12px; font-size: 12px; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
+.gantt-legenda-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; background: repeating-linear-gradient(45deg, #0f172a, #0f172a 3px, #64748b 3px, #64748b 6px); }
+.gantt-legenda-dot.em-andamento { background: repeating-linear-gradient(45deg, #92400e, #92400e 3px, #fbbf24 3px, #fbbf24 6px); }
+.gantt-timeline { position: relative; min-height: 38px; }
 .gantt-daycols { position: absolute; inset: 0; display: flex; }
 .gantt-daycol { border-right: 1px solid #f1f5f9; flex-shrink: 0; }
 .gantt-daycol.weekend { background: #f8fafc; }
@@ -269,6 +289,15 @@ tbody tr:hover { background: #f8fafc; }
 .gantt-bar.status-atrasada { background: var(--red); }
 .gantt-bar.sub { top: 28px; height: 14px; opacity: .85; }
 .gantt-bar-progress { position: absolute; left:0; top:0; bottom:0; background: rgba(0,0,0,.22); border-radius: 4px 0 0 4px; }
+.gantt-bar-real {
+  position: absolute;
+  top: 26px;
+  height: 8px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, #0f172a, #0f172a 3px, #64748b 3px, #64748b 6px);
+  box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.gantt-bar-real.em-andamento { background: repeating-linear-gradient(45deg, #92400e, #92400e 3px, #fbbf24 3px, #fbbf24 6px); }
 
 /* Resumo */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 14px; margin-bottom: 20px; }

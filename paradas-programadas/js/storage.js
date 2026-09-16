@@ -21,7 +21,8 @@ const Storage = (() => {
   const FILE_NAME = 'dados-paradas.json';
 
   let db = null;
-  let folderHandle = null;
+  let folderHandle = null;       // pasta ativa nesta sessão (permissão concedida)
+  let pastaArmazenadaHandle = null; // pasta lembrada (pode precisar reconectar após reabrir o navegador)
 
   function openDb() {
     return new Promise((resolve, reject) => {
@@ -131,28 +132,62 @@ const Storage = (() => {
 
   function atualizarLabelPasta() {
     const el = document.getElementById('pasta-nome');
-    if (el) el.textContent = folderHandle ? folderHandle.name : 'não definida';
+    if (el) {
+      if (folderHandle) el.textContent = folderHandle.name;
+      else if (pastaArmazenadaHandle) el.textContent = `${pastaArmazenadaHandle.name} (clique para reconectar)`;
+      else el.textContent = 'não definida';
+    }
+    const btnTrocar = document.getElementById('btn-trocar-pasta');
+    if (btnTrocar) btnTrocar.hidden = !pastaArmazenadaHandle;
   }
 
+  /** No carregamento, tenta restaurar silenciosamente a pasta lembrada (sem abrir diálogo nenhum). */
   async function restaurarPastaSalva() {
     if (!db || !suportaSistemaArquivos()) return;
     try {
       const handle = await idbGet(STORE_HANDLES, HANDLE_KEY);
       if (!handle) return;
+      pastaArmazenadaHandle = handle;
       const perm = await handle.queryPermission({ mode: 'readwrite' });
       if (perm === 'granted') {
         folderHandle = handle;
-        atualizarLabelPasta();
-      } else {
-        // Mantém guardado, mas só reativa quando o usuário clicar de novo
-        // (a API exige gesto do usuário para reconceder permissão).
-        folderHandle = null;
       }
+      // Se a permissão não foi concedida automaticamente, a pasta continua
+      // lembrada (pastaArmazenadaHandle) — basta 1 clique no botão "Pasta"
+      // para reconectar, sem precisar escolher a pasta de novo.
+      atualizarLabelPasta();
     } catch (e) {
       console.warn('Não foi possível restaurar a pasta salva anteriormente', e);
     }
   }
 
+  /** Clique no botão principal "Pasta": conecta a pasta já lembrada, sem abrir um novo diálogo de seleção. */
+  async function conectarPastaSalva() {
+    if (folderHandle) {
+      showToast(`Pasta já conectada: "${folderHandle.name}". Use "Trocar pasta" para escolher outra.`);
+      return folderHandle;
+    }
+    if (!pastaArmazenadaHandle) {
+      return escolherPasta();
+    }
+    try {
+      const perm = await pastaArmazenadaHandle.requestPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        folderHandle = pastaArmazenadaHandle;
+        atualizarLabelPasta();
+        showToast(`Pasta "${folderHandle.name}" reconectada.`);
+        return folderHandle;
+      }
+      showToast('Permissão de acesso à pasta não concedida.', true);
+      return null;
+    } catch (e) {
+      console.error(e);
+      showToast('Não foi possível reconectar à pasta salva.', true);
+      return null;
+    }
+  }
+
+  /** Escolha explícita de uma pasta nova (primeira vez, ou "Trocar pasta"). Sempre abre o diálogo do sistema. */
   async function escolherPasta() {
     if (!suportaSistemaArquivos()) {
       showToast('Seu navegador não suporta escolher uma pasta diretamente. Use Exportar/Importar para manter um backup em arquivo.', true);
@@ -161,9 +196,10 @@ const Storage = (() => {
     try {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
       folderHandle = handle;
+      pastaArmazenadaHandle = handle;
       if (db) await idbSet(STORE_HANDLES, HANDLE_KEY, handle);
       atualizarLabelPasta();
-      showToast(`Pasta "${handle.name}" selecionada. Os dados serão salvos automaticamente nela.`);
+      showToast(`Pasta "${handle.name}" selecionada. Os dados serão salvos automaticamente nela a partir de agora.`);
       return handle;
     } catch (e) {
       if (e.name !== 'AbortError') {
@@ -208,6 +244,7 @@ const Storage = (() => {
     load,
     save,
     escolherPasta,
+    conectarPastaSalva,
     restaurarPastaSalva,
     suportaSistemaArquivos,
     exportJson,

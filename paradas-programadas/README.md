@@ -8,7 +8,9 @@ Tudo roda direto no navegador. Não há backend, não há envio de dados para lu
 
 **Opção mais simples:** dê duplo clique em `index.html`. Funciona no Chrome, Edge, Firefox e Safari. Os dados ficam salvos automaticamente no navegador (IndexedDB) e continuam lá mesmo se você fechar e abrir de novo.
 
-**Opção com pasta própria no disco:** para usar o botão **"📁 Pasta"** do topo (que salva um arquivo `dados-paradas.json` na pasta que você escolher, além do IndexedDB), abra o sistema através de um servidor local — isso evita restrições de segurança que alguns navegadores aplicam a arquivos abertos direto do disco:
+**Opção com pasta própria no disco:** para usar o botão **"📁 Pasta"** do topo (que salva um arquivo `dados-paradas.json` na pasta que você escolher, além do IndexedDB), abra o sistema através de um servidor local — isso evita restrições de segurança que alguns navegadores aplicam a arquivos abertos direto do disco.
+
+Depois de escolher a pasta uma vez, o sistema lembra dela. Nas próximas vezes, basta clicar em **"📁 Pasta"** para reconectar (não abre um seletor novo). Só é aberto um seletor de pasta quando você clica em **"🔁 Trocar pasta"**, que aparece ao lado assim que uma pasta já foi escolhida — é a forma explícita de apontar para outro lugar.
 
 - **Windows:** dê duplo clique em `scripts/iniciar-windows.bat`.
 - **Mac/Linux:** rode `scripts/iniciar-mac-linux.sh` (ou dê duplo clique se seu sistema permitir).
@@ -23,13 +25,16 @@ Se preferir, qualquer outro servidor estático local funciona (ex.: extensão "L
 
 1. **Cadastro de Paradas** — nome, local, descrição, status e o calendário utilizado.
 2. **Calendários** — perfis reutilizáveis que definem quantas horas por dia contam como "tempo produtivo" da parada, quais dias da semana são úteis e exceções (feriados, dias com capacidade reduzida). É esse calendário que alimenta o cálculo automático de datas.
-3. **Atividades e sub-atividades** — cada atividade pode ter uma ou mais sub-atividades, descrição, responsável, área e imagens anexadas (fotos do local, desenhos, etc.).
+3. **Atividades e sub-atividades** — cada atividade pode ter uma ou mais sub-atividades, descrição, responsável, área e imagens anexadas (fotos do local, desenhos, etc.). A listagem fica sempre ordenada por Data/Hora de Início, com cada sub-atividade agrupada logo abaixo da atividade correspondente.
 4. **Recursos por atividade** — mão de obra, equipamento, material ou serviço, com quantidade, unidade e custo unitário (o sistema soma o custo estimado automaticamente).
-5. **Data e duração com cálculo automático** — informe a Data/Hora de Início e a Duração (em horas) que a Data/Hora Fim é calculada sozinha (respeitando o calendário da parada). Também funciona ao contrário: edite a Data Fim e a Duração é recalculada.
-6. **Visão em Tabela e Gantt** — tabela com filtros e ordenação por coluna; Gantt com zoom por dia ou semana, barra de progresso e cores por status.
+5. **Data e duração com cálculo automático** — informe a Data/Hora de Início e a Duração (em horas) que a Data/Hora Fim planejada é calculada sozinha (respeitando o calendário da parada); também funciona ao contrário. Além disso, cada atividade tem campos de **Início real** e **Fim real**, preenchidos conforme o trabalho de fato acontece, com a duração real calculada automaticamente — para comparar planejado × real.
+6. **Visão em Tabela e Gantt** — tabela com filtros, ordenação por coluna e exportação para Excel; Gantt com zoom por dia ou semana, barra de progresso, cores por status e uma barra tracejada mostrando a execução real ao lado da planejada.
 7. **Resumo** — painel com total de atividades, progresso médio, duração total da parada, recursos por tipo e custo estimado.
-8. **Relatórios simplificado e completo/detalhado** — o simplificado é uma tabela enxuta; o completo traz descrição, recursos e imagens de cada atividade e sub-atividade.
+8. **Relatórios simplificado e completo/detalhado** — o simplificado é uma tabela enxuta (com datas planejadas e reais); o completo traz descrição, recursos e imagens de cada atividade e sub-atividade.
 9. **Relatório Gantt** — o gráfico de Gantt em formato pronto para impressão.
+10. **Relatório com Imagens** — galeria de fotos por atividade/sub-atividade, pronta para impressão.
+11. **Exportar para Excel** — na aba Tabela, o botão "📊 Exportar Excel" gera um `.xlsx` com duas planilhas (Atividades e Recursos), respeitando os filtros aplicados.
+12. **Pré-visualização de imagens** — na aba Atividades, cada atividade com fotos tem um botão "🖼 Ver imagens" que abre uma galeria em tela cheia (com navegação entre fotos); dentro do formulário, clicar em qualquer miniatura também abre essa pré-visualização.
 
 Todos os relatórios têm um botão **"🖨 Imprimir / Salvar PDF"** — use a opção "Salvar como PDF" da caixa de impressão do navegador para gerar o arquivo.
 
@@ -50,6 +55,8 @@ paradas-programadas/
 │   ├── calendar.js             motor de cálculo de datas/duração
 │   ├── storage.js               IndexedDB + pasta no disco + exportar/importar
 │   ├── state.js                 modelo de dados e CRUD em memória
+│   ├── xlsx-writer.js           gerador de planilhas .xlsx sem dependências externas
+│   ├── ui-imagens.js            galeria/lightbox de pré-visualização de imagens
 │   ├── ui-paradas-calendarios.js
 │   ├── ui-atividades.js
 │   ├── ui-tabela.js

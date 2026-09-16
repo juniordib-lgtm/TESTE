@@ -7,9 +7,11 @@ const UITabela = (() => {
     { key: 'responsavel', label: 'Responsável' },
     { key: 'area', label: 'Área' },
     { key: 'statusLabel', label: 'Status' },
-    { key: 'dataInicio', label: 'Início' },
-    { key: 'dataFim', label: 'Fim' },
-    { key: 'duracaoHoras', label: 'Duração' },
+    { key: 'dataInicio', label: 'Início planejado' },
+    { key: 'dataFim', label: 'Fim planejado' },
+    { key: 'duracaoHoras', label: 'Duração planejada' },
+    { key: 'inicioReal', label: 'Início real' },
+    { key: 'fimReal', label: 'Fim real' },
     { key: 'progresso', label: 'Progresso' },
     { key: 'qtdRecursos', label: 'Recursos' },
     { key: 'qtdImagens', label: 'Imagens' }
@@ -45,7 +47,7 @@ const UITabela = (() => {
     const { campo, asc } = ordenacao;
     return linhas.slice().sort((a, b) => {
       let va = a[campo], vb = b[campo];
-      if (campo === 'dataInicio' || campo === 'dataFim') { va = va ? new Date(va).getTime() : 0; vb = vb ? new Date(vb).getTime() : 0; }
+      if (['dataInicio', 'dataFim', 'inicioReal', 'fimReal'].includes(campo)) { va = va ? new Date(va).getTime() : 0; vb = vb ? new Date(vb).getTime() : 0; }
       if (typeof va === 'string') va = va.toLowerCase();
       if (typeof vb === 'string') vb = vb.toLowerCase();
       if (va < vb) return asc ? -1 : 1;
@@ -96,6 +98,8 @@ const UITabela = (() => {
           <td>${formatDateTime(l.dataInicio)}</td>
           <td>${formatDateTime(l.dataFim)}</td>
           <td>${formatHoras(l.duracaoHoras)}</td>
+          <td>${l.inicioReal ? formatDateTime(l.inicioReal) : '—'}</td>
+          <td>${l.fimReal ? formatDateTime(l.fimReal) : '—'}</td>
           <td>${l.progresso || 0}%</td>
           <td>${l.qtdRecursos}</td>
           <td>${l.qtdImagens}</td>
@@ -115,9 +119,49 @@ const UITabela = (() => {
     });
   }
 
+  function exportarExcel() {
+    const parada = State.getParadaAtiva();
+    if (!parada) { showToast('Selecione uma parada primeiro.', true); return; }
+
+    const linhas = ordenar(aplicarFiltros(linhasBase()));
+    const colunasAtividades = [
+      'Atividade', 'Tipo', 'Responsável', 'Área', 'Status',
+      'Início planejado', 'Fim planejado', 'Duração planejada (h)',
+      'Início real', 'Fim real', 'Duração real (h)',
+      'Progresso (%)', 'Recursos', 'Imagens', 'Descrição'
+    ];
+    const linhasAtividades = linhas.map(l => [
+      (l.parentId ? '↳ ' : '') + (l.nome || ''),
+      l.tipoLabel, l.responsavel || '', l.area || '', l.statusLabel,
+      formatDateTime(l.dataInicio), formatDateTime(l.dataFim), Number(l.duracaoHoras) || 0,
+      l.inicioReal ? formatDateTime(l.inicioReal) : '', l.fimReal ? formatDateTime(l.fimReal) : '',
+      State.duracaoRealHoras(l) ?? '',
+      l.progresso || 0, l.qtdRecursos, l.qtdImagens, l.descricao || ''
+    ]);
+
+    const colunasRecursos = ['Atividade', 'Tipo de recurso', 'Recurso', 'Quantidade', 'Unidade', 'Custo unitário', 'Custo total'];
+    const linhasRecursos = [];
+    linhas.forEach(l => {
+      (l.recursos || []).forEach(r => {
+        const qtd = Number(r.quantidade) || 0;
+        const custo = Number(r.custoUnitario) || 0;
+        linhasRecursos.push([l.nome, r.tipo, r.nome || '', qtd, r.unidade || '', custo, roundTo(qtd * custo, 2)]);
+      });
+    });
+
+    const ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    XlsxWriter.baixar([
+      { nome: 'Atividades', colunas: colunasAtividades, linhas: linhasAtividades },
+      { nome: 'Recursos', colunas: colunasRecursos, linhas: linhasRecursos }
+    ], `${parada.nome.replace(/[^\w\-]+/g, '_')}-${ts}`);
+    showToast('Planilha Excel exportada.');
+  }
+
   function render() {
     renderFiltros();
     renderTabela();
+    const btn = document.getElementById('btn-exportar-excel');
+    btn.onclick = exportarExcel;
   }
 
   return { render };

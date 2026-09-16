@@ -19,7 +19,8 @@
 
   <div class="topbar-actions">
     <select id="seletor-parada" title="Parada ativa"></select>
-    <button id="btn-pasta" class="btn btn-ghost" title="Escolher pasta onde salvar os dados">📁 Pasta: <span id="pasta-nome">não definida</span></button>
+    <button id="btn-pasta" class="btn btn-ghost" title="Conectar à pasta escolhida (ou escolher uma pela 1ª vez)">📁 Pasta: <span id="pasta-nome">não definida</span></button>
+    <button id="btn-trocar-pasta" class="btn btn-ghost" title="Selecionar uma pasta diferente" hidden>🔁 Trocar pasta</button>
     <button id="btn-exportar" class="btn btn-ghost" title="Exportar backup em .json">⬇ Exportar</button>
     <button id="btn-importar" class="btn btn-ghost" title="Importar backup em .json">⬆ Importar</button>
     <input type="file" id="input-importar" accept="application/json" hidden>
@@ -70,6 +71,7 @@
     <div class="view-header">
       <h2>Visão em Tabela</h2>
       <div class="filtros" id="filtros-tabela"></div>
+      <button id="btn-exportar-excel" class="btn btn-secondary">📊 Exportar Excel</button>
     </div>
     <div class="table-wrap">
       <table id="tabela-atividades">
@@ -102,6 +104,7 @@
       <button id="btn-rel-simples" class="btn btn-secondary">📄 Relatório Simplificado</button>
       <button id="btn-rel-completo" class="btn btn-secondary">📋 Relatório Completo / Detalhado</button>
       <button id="btn-rel-gantt" class="btn btn-secondary">📊 Relatório Gantt</button>
+      <button id="btn-rel-imagens" class="btn btn-secondary">🖼 Relatório com Imagens</button>
     </div>
     <div id="relatorio-preview" class="report-preview"></div>
   </section>
@@ -118,6 +121,8 @@
 <script src="js/calendar.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/state.js"></script>
+<script src="js/xlsx-writer.js"></script>
+<script src="js/ui-imagens.js"></script>
 <script src="js/ui-paradas-calendarios.js"></script>
 <script src="js/ui-atividades.js"></script>
 <script src="js/ui-tabela.js"></script>

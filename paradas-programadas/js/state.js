@@ -46,6 +46,8 @@ const State = (() => {
       if (!Array.isArray(a.recursos)) a.recursos = [];
       if (a.progresso === undefined) a.progresso = 0;
       if (!a.status) a.status = 'planejada';
+      if (a.inicioReal === undefined) a.inicioReal = null;
+      if (a.fimReal === undefined) a.fimReal = null;
     });
     return d;
   }
@@ -127,11 +129,20 @@ const State = (() => {
 
   // ---------- Atividades ----------
 
+  /** Ordenada por Data/Hora de Início (sem data vai para o final); empate usa a ordem de cadastro. */
   function listarAtividadesDaParada(paradaId) {
-    return data.atividades.filter(a => a.paradaId === paradaId).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    return data.atividades.filter(a => a.paradaId === paradaId).sort((a, b) => {
+      const da = a.dataInicio ? new Date(a.dataInicio).getTime() : Infinity;
+      const db = b.dataInicio ? new Date(b.dataInicio).getTime() : Infinity;
+      if (da !== db) return da - db;
+      return (a.ordem || 0) - (b.ordem || 0);
+    });
   }
 
-  /** Retorna apenas as atividades de topo (sem parentId), cada uma com .subAtividades preenchido */
+  /** Retorna apenas as atividades de topo (sem parentId), cada uma com .subAtividades preenchido.
+   *  Tanto as atividades de topo quanto as sub-atividades de cada uma ficam em ordem
+   *  cronológica (Data/Hora de Início), e cada sub-atividade permanece agrupada
+   *  logo abaixo da sua atividade correspondente. */
   function arvoreAtividades(paradaId) {
     const todas = listarAtividadesDaParada(paradaId);
     const porId = {};
@@ -147,11 +158,33 @@ const State = (() => {
     return raizes;
   }
 
+  /** Achata a árvore em uma lista [{ ...atividade, nivel }], mantendo cada
+   *  sub-atividade logo após a atividade correspondente (ordem de exibição
+   *  usada pela listagem, pelo Gantt e pelos relatórios). */
+  function listaAchatada(paradaId) {
+    const out = [];
+    (function visitar(lista, nivel) {
+      lista.forEach(a => {
+        const { subAtividades, ...resto } = a;
+        out.push({ ...resto, nivel });
+        visitar(subAtividades || [], nivel + 1);
+      });
+    })(arvoreAtividades(paradaId), 0);
+    return out;
+  }
+
   function getAtividade(id) { return data.atividades.find(a => a.id === id) || null; }
 
   function calendarioDaAtividade(atividade) {
     const parada = getParada(atividade.paradaId);
     return parada ? getCalendario(parada.calendarioId) : calendarioPadrao();
+  }
+
+  /** Duração real (horas produtivas), ou null se início e/ou fim real não estiverem preenchidos. */
+  function duracaoRealHoras(atividade) {
+    if (!atividade.inicioReal || !atividade.fimReal) return null;
+    const calendario = calendarioDaAtividade(atividade);
+    return calcularDuracaoHoras(new Date(atividade.inicioReal), new Date(atividade.fimReal), calendario);
   }
 
   /**
@@ -235,7 +268,7 @@ const State = (() => {
     init, onChange, persist, getData, substituirTudo,
     listarParadas, getParada, getParadaAtiva, setParadaAtiva, salvarParada, excluirParada,
     listarCalendarios, getCalendario, salvarCalendario, excluirCalendario,
-    listarAtividadesDaParada, arvoreAtividades, getAtividade, salvarAtividade, excluirAtividade,
-    calendarioDaAtividade, faixaDataParada
+    listarAtividadesDaParada, arvoreAtividades, listaAchatada, getAtividade, salvarAtividade, excluirAtividade,
+    calendarioDaAtividade, faixaDataParada, duracaoRealHoras
   };
 })();
