@@ -15,6 +15,37 @@ const UIGantt = (() => {
     return dias;
   }
 
+  function horasEntre(inicio, fim) {
+    const horas = [];
+    let cursor = new Date(inicio);
+    cursor.setMinutes(0, 0, 0);
+    const limite = new Date(fim);
+    limite.setMinutes(0, 0, 0);
+    while (cursor <= limite) {
+      horas.push(new Date(cursor));
+      cursor = new Date(cursor.getTime() + 3600000);
+    }
+    return horas;
+  }
+
+  /** Cabeçalho de duas linhas (dia agrupador + hora) usado no zoom "Horas". */
+  function headerHorasHtml(horas, colWidth) {
+    const grupos = [];
+    horas.forEach(h => {
+      const key = dateKey(h);
+      const atual = grupos[grupos.length - 1];
+      if (!atual || atual.key !== key) grupos.push({ key, dia: h, qtd: 1 });
+      else atual.qtd++;
+    });
+    const linhaDias = grupos.map(g =>
+      `<div class="gantt-header-cell" style="width:${g.qtd * colWidth}px; font-weight:700;">${pad2(g.dia.getDate())}/${pad2(g.dia.getMonth() + 1)}</div>`
+    ).join('');
+    const linhaHoras = horas.map(h =>
+      `<div class="gantt-header-cell gantt-header-hora" style="width:${colWidth}px;">${pad2(h.getHours())}h</div>`
+    ).join('');
+    return `<div style="display:flex;">${linhaDias}</div><div style="display:flex;">${linhaHoras}</div>`;
+  }
+
   /** Monta o HTML do grid do Gantt para uma parada. Reaproveitado pelo relatório Gantt. */
   function construirHtmlGantt(paradaId, zoom) {
     const linhas = State.listaAchatada(paradaId).filter(a => a.dataInicio && a.dataFim);
@@ -37,27 +68,35 @@ const UIGantt = (() => {
     rangeInicio = new Date(rangeInicio.getTime() - 43200000); // meio dia de folga
     rangeFim = new Date(rangeFim.getTime() + 43200000);
 
-    const colWidth = zoom === 'dia' ? 46 : 20;
-    const dias = diasEntre(rangeInicio, rangeFim);
+    const zoomConfig = {
+      hora: { granularidade: 'hora', colWidth: 30 },
+      dia: { granularidade: 'dia', colWidth: 46 },
+      semana: { granularidade: 'dia', colWidth: 20 }
+    }[zoom] || { granularidade: 'dia', colWidth: 20 };
+
+    const colWidth = zoomConfig.colWidth;
+    const unidades = zoomConfig.granularidade === 'hora' ? horasEntre(rangeInicio, rangeFim) : diasEntre(rangeInicio, rangeFim);
     const hoje = dateKey(new Date());
 
-    const daycolsHtml = dias.map(d => {
-      const dow = d.getDay();
+    const daycolsHtml = unidades.map(u => {
+      const dow = u.getDay();
       const classes = ['gantt-daycol'];
       if (dow === 0 || dow === 6) classes.push('weekend');
-      if (dateKey(d) === hoje) classes.push('today');
+      if (dateKey(u) === hoje) classes.push('today');
       return `<div class="${classes.join(' ')}" style="width:${colWidth}px"></div>`;
     }).join('');
 
-    const headerCells = dias.map(d => {
-      const dow = d.getDay();
-      let label = '';
-      if (zoom === 'dia') label = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
-      else if (dow === 1 || d.getTime() === dias[0].getTime()) label = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
-      return `<div class="gantt-header-cell" style="width:${colWidth}px">${label}</div>`;
-    }).join('');
+    const headerHtml = zoomConfig.granularidade === 'hora'
+      ? headerHorasHtml(unidades, colWidth)
+      : `<div style="display:flex;">${unidades.map(d => {
+          const dow = d.getDay();
+          let label = '';
+          if (zoom === 'dia') label = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+          else if (dow === 1 || d.getTime() === unidades[0].getTime()) label = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+          return `<div class="gantt-header-cell" style="width:${colWidth}px">${label}</div>`;
+        }).join('')}</div>`;
 
-    const totalWidth = dias.length * colWidth;
+    const totalWidth = unidades.length * colWidth;
     const msPorPixel = (rangeFim - rangeInicio) / totalWidth;
 
     function barraStyle(ini, fim) {
@@ -104,7 +143,7 @@ const UIGantt = (() => {
         <div class="gantt-row header-row">
           <div class="gantt-row-label">Atividade</div>
           <div class="gantt-timeline" style="width:${totalWidth}px; min-height:0;">
-            <div style="display:flex;">${headerCells}</div>
+            ${headerHtml}
           </div>
         </div>
         ${linhasHtml}

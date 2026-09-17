@@ -270,6 +270,7 @@ tbody tr:hover { background: #f8fafc; }
 .gantt-daycol.weekend { background: #f8fafc; }
 .gantt-daycol.today { background: #fef9c3; }
 .gantt-header-cell { flex-shrink: 0; text-align: center; padding: 6px 2px; border-right: 1px solid var(--border); overflow: hidden; }
+.gantt-header-hora { padding: 3px 2px; font-size: 10px; color: var(--text-muted); font-weight: 500; }
 .gantt-bar {
   position: absolute;
   top: 6px;

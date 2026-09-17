@@ -110,7 +110,13 @@ imprimíveis via `window.print()`, com CSS `@media print` mostrando apenas
 
 - **Gantt** (`ui-gantt.js`): barra sólida = planejado, barra tracejada
   abaixo = execução real (`inicioReal`/`fimReal`). `construirHtmlGantt` é
-  reaproveitado pelo Relatório Gantt.
+  reaproveitado pelo Relatório Gantt. Zoom em 3 granularidades (select
+  `#gantt-zoom`): `semana`/`dia` usam colunas por dia (`diasEntre`,
+  larguras diferentes); `hora` usa colunas por hora (`horasEntre`) com
+  cabeçalho de duas linhas (`headerHorasHtml`: linha de dia agrupador +
+  linha de hora). O posicionamento das barras (`barraStyle`) é sempre
+  proporcional a milissegundos reais / largura total em pixels, então
+  funciona igual nas três granularidades sem lógica especial.
 - **Galeria de imagens** (`ui-imagens.js`): overlay **próprio**, fora do
   `Modal` genérico (`#modal-overlay`), para poder abrir por cima do
   formulário de atividade sem destruí-lo (bug real encontrado e corrigido
