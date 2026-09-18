@@ -27,7 +27,7 @@ const UIRelatorios = (() => {
     const linhas = State.listaAchatada(parada.id);
     const corpo = linhas.map(a => `
       <tr>
-        <td>${a.nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)}</td>
+        <td>${'　　'.repeat(a.nivel)}${a.nivel > 0 ? '↳ ' : ''}${escapeHtml(a.nome)}</td>
         <td>${escapeHtml(a.responsavel || '—')}</td>
         <td><span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span></td>
         <td>${formatDateTime(a.dataInicio)}</td>

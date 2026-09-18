@@ -121,7 +121,7 @@ const UIGantt = (() => {
       const tituloPred = pred ? ` — após ${escapeHtml(pred.nome)}${a.defasagemHoras ? ` +${a.defasagemHoras}h` : ''}` : '';
       return `
       <div class="gantt-row" data-id="${a.id}">
-        <div class="gantt-row-label ${nivel > 0 ? 'sub' : ''}" title="${escapeHtml(a.nome)}">${nivel > 0 ? '↳ ' : ''}${pred ? '🔗 ' : ''}${escapeHtml(a.nome)}</div>
+        <div class="gantt-row-label ${nivel > 0 ? 'sub' : ''}" style="${nivel > 0 ? `padding-left:${10 + nivel * 16}px` : ''}" title="${escapeHtml(a.nome)}">${nivel > 0 ? '↳ ' : ''}${pred ? '🔗 ' : ''}${escapeHtml(a.nome)}</div>
         <div class="gantt-timeline" style="width:${totalWidth}px">
           <div class="gantt-daycols">${daycolsHtml}</div>
           <div class="gantt-bar status-${a.status}" style="${barraStyle(new Date(a.dataInicio), new Date(a.dataFim))}" title="${tituloBase}${tituloPred}">

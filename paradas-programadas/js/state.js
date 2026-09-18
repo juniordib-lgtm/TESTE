@@ -261,6 +261,23 @@ const State = (() => {
     return visitados;
   }
 
+  // ---------- Hierarquia (sub-atividades em qualquer profundidade) ----------
+
+  /** Atividades (da mesma parada) que são sub-atividade direta de `atividadeId`. */
+  function filhosDiretos(atividadeId) {
+    return data.atividades.filter(a => a.parentId === atividadeId);
+  }
+
+  /** IDs de `atividadeId` + todos os seus descendentes (filhos, netos, ...). Usado para
+   *  impedir que uma atividade seja definida como sub-atividade de algo que já é
+   *  seu próprio descendente (o que criaria um laço na árvore). */
+  function cadeiaDescendentes(atividadeId, visitados = new Set()) {
+    if (visitados.has(atividadeId)) return visitados;
+    visitados.add(atividadeId);
+    filhosDiretos(atividadeId).forEach(f => cadeiaDescendentes(f.id, visitados));
+    return visitados;
+  }
+
   /**
    * Recalcula Data Início/Fim de todas as atividades de uma parada, respeitando a
    * cadeia de predecessoras: quem tem predecessora tem sua Data Início derivada
@@ -321,6 +338,7 @@ const State = (() => {
     listarCalendarios, getCalendario, salvarCalendario, excluirCalendario,
     listarAtividadesDaParada, arvoreAtividades, listaAchatada, getAtividade, salvarAtividade, excluirAtividade,
     calendarioDaAtividade, faixaDataParada, duracaoRealHoras,
-    sucessorasDiretas, cadeiaSucessoras, recalcularProgramacao
+    sucessorasDiretas, cadeiaSucessoras, recalcularProgramacao,
+    filhosDiretos, cadeiaDescendentes
   };
 })();

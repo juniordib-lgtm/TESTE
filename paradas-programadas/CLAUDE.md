@@ -67,6 +67,19 @@ uma atividade é salva/excluída, o calendário de uma parada muda, ou o
 calendário atribuído a uma parada muda. `cadeiaSucessoras(id)` é usada para
 filtrar o `<select>` de predecessora e impedir referência circular.
 
+### Hierarquia sem limite de profundidade
+Sub-atividade pode ter sua própria sub-atividade, em qualquer nível — não
+há campo/flag de "nível máximo", `arvoreAtividades`/`listaAchatada` já eram
+recursivas desde o início. A única coisa que antes limitava a 1 nível era o
+`<select name="parentId">` do formulário, que só listava atividades de
+topo; agora lista `State.listaAchatada(paradaId)` inteira (com indentação
+visual por `nivel`), filtrando com `cadeiaDescendentes(id)` (análogo ao
+`cadeiaSucessoras` das predecessoras) para impedir que uma atividade vire
+sub-atividade de algo que já é seu próprio descendente. A indentação visual
+(margin/padding proporcional a `nivel`) é aplicada inline em
+`ui-atividades.js` (lista) e `ui-gantt.js` (rótulos), já que o `nivel` não
+tem teto fixo.
+
 ### Ordenação
 `listarAtividadesDaParada` ordena por `dataInicio` (não por ordem de
 cadastro). `arvoreAtividades`/`listaAchatada` mantêm cada sub-atividade

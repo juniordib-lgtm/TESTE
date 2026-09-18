@@ -226,7 +226,7 @@ legend { font-size: 12px; font-weight: 700; color: var(--text-muted); padding: 0
   padding: 12px 14px;
   margin-bottom: 8px;
 }
-.atividade-item.sub { margin-left: 28px; border-left: 3px solid var(--primary); }
+.atividade-item.sub { border-left: 3px solid var(--primary); }
 .atividade-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .atividade-titulo { font-weight: 600; font-size: 14px; }
 .atividade-sub-label { font-size: 11px; color: var(--gray); font-weight: 500; margin-right: 6px; }
@@ -260,7 +260,7 @@ tbody tr:hover { background: #f8fafc; }
   overflow: hidden; text-overflow: ellipsis;
 }
 .gantt-row.header-row .gantt-row-label { background: #f8fafc; }
-.gantt-row-label.sub { padding-left: 26px; color: var(--text-muted); }
+.gantt-row-label.sub { color: var(--text-muted); }
 .gantt-legenda { display: flex; gap: 16px; padding: 8px 12px; font-size: 12px; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
 .gantt-legenda-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; background: repeating-linear-gradient(45deg, #0f172a, #0f172a 3px, #64748b 3px, #64748b 6px); }
 .gantt-legenda-dot.em-andamento { background: repeating-linear-gradient(45deg, #92400e, #92400e 3px, #fbbf24 3px, #fbbf24 6px); }

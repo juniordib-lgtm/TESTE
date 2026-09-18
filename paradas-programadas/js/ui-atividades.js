@@ -21,14 +21,15 @@ const UIAtividades = (() => {
       el.innerHTML = `<div class="empty-state">Nenhuma atividade cadastrada para "${escapeHtml(parada.nome)}".<br>Clique em "+ Nova Atividade" para começar.</div>`;
       return;
     }
-    el.innerHTML = arvore.map(a => itemHtml(a, false)).join('');
+    el.innerHTML = arvore.map(a => itemHtml(a, 0)).join('');
     wireItens(el);
   }
 
-  function itemHtml(a, isSub) {
+  function itemHtml(a, nivel) {
+    const isSub = nivel > 0;
     const imgs = (a.imagens || []).length;
     const recs = (a.recursos || []).length;
-    const subHtml = (a.subAtividades || []).map(s => itemHtml(s, true)).join('');
+    const subHtml = (a.subAtividades || []).map(s => itemHtml(s, nivel + 1)).join('');
     const real = a.inicioReal
       ? (a.fimReal ? `✅ Real: ${formatDateTime(a.inicioReal)} → ${formatDateTime(a.fimReal)}` : `▶ Real: iniciado em ${formatDateTime(a.inicioReal)} (em andamento)`)
       : null;
@@ -38,15 +39,15 @@ const UIAtividades = (() => {
       ? `${pred ? `🔗 Após: ${escapeHtml(pred.nome)}${a.defasagemHoras ? ` (+${a.defasagemHoras}h)` : ''}` : ''}${pred && qtdSucessoras > 0 ? ' · ' : ''}${qtdSucessoras > 0 ? `➜ ${qtdSucessoras} atividade(s) dependem desta` : ''}`
       : null;
     return `
-      <div class="atividade-item ${isSub ? 'sub' : ''}" data-id="${a.id}">
+      <div class="atividade-item ${isSub ? 'sub' : ''}" data-id="${a.id}" style="${isSub ? `margin-left:${nivel * 28}px` : ''}">
         <div class="atividade-head">
           <div>
-            ${isSub ? '<span class="atividade-sub-label">SUB-ATIVIDADE</span>' : ''}
+            ${isSub ? `<span class="atividade-sub-label">SUB-ATIVIDADE${nivel > 1 ? ` · nível ${nivel}` : ''}</span>` : ''}
             <span class="atividade-titulo">${escapeHtml(a.nome)}</span>
             <span class="badge badge-${a.status}">${STATUS_LABELS[a.status]}</span>
           </div>
           <div class="atividade-actions">
-            ${!isSub ? `<button class="btn btn-secondary btn-small" data-action="nova-sub">+ Sub-atividade</button>` : ''}
+            <button class="btn btn-secondary btn-small" data-action="nova-sub">+ Sub-atividade</button>
             ${imgs > 0 ? `<button class="btn btn-secondary btn-small" data-action="ver-imagens">🖼 Ver imagens (${imgs})</button>` : ''}
             <button class="btn btn-secondary btn-small" data-action="editar">Editar</button>
             <button class="btn btn-danger btn-small" data-action="excluir">Excluir</button>
@@ -118,8 +119,12 @@ const UIAtividades = (() => {
     atividade.inicioReal = atividade.inicioReal ? toInputDateTime(atividade.inicioReal) : '';
     atividade.fimReal = atividade.fimReal ? toInputDateTime(atividade.fimReal) : '';
 
-    const opcoesPai = State.listarAtividadesDaParada(parada.id)
-      .filter(a => !a.parentId && a.id !== atividade.id);
+    // não pode escolher como pai a própria atividade nem uma sub-atividade que já é
+    // sua descendente (evita laço na árvore) — sub-atividades também podem ter suas
+    // próprias sub-atividades, em qualquer profundidade.
+    const idsIndisponiveisComoPai = atividade.id ? State.cadeiaDescendentes(atividade.id) : new Set();
+    const opcoesPai = State.listaAchatada(parada.id)
+      .filter(a => !idsIndisponiveisComoPai.has(a.id));
 
     // não pode escolher como predecessora a própria atividade nem quem já depende dela (evita ciclo)
     const idsIndisponiveisComoPredecessora = atividade.id ? State.cadeiaSucessoras(atividade.id) : new Set();
@@ -142,7 +147,7 @@ const UIAtividades = (() => {
             <label>Esta é sub-atividade de:</label>
             <select name="parentId">
               <option value="">— Nenhuma (atividade principal) —</option>
-              ${opcoesPai.map(o => `<option value="${o.id}" ${atividade.parentId === o.id ? 'selected' : ''}>${escapeHtml(o.nome)}</option>`).join('')}
+              ${opcoesPai.map(o => `<option value="${o.id}" ${atividade.parentId === o.id ? 'selected' : ''}>${'　　'.repeat(o.nivel)}${o.nivel > 0 ? '↳ ' : ''}${escapeHtml(o.nome)}</option>`).join('')}
             </select>
           </div>
           <div class="form-field">
