@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paradas Programadas</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="topbar-logo">⏱</span>
+    <div>
+      <h1>Paradas Programadas</h1>
+      <small id="parada-ativa-label">Nenhuma parada selecionada</small>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <select id="seletor-parada" title="Parada ativa"></select>
+    <button id="btn-pasta" class="btn btn-ghost" title="Conectar à pasta escolhida (ou escolher uma pela 1ª vez)">📁 Pasta: <span id="pasta-nome">não definida</span></button>
+    <button id="btn-trocar-pasta" class="btn btn-ghost" title="Selecionar uma pasta diferente" hidden>🔁 Trocar pasta</button>
+    <button id="btn-exportar" class="btn btn-ghost" title="Exportar backup em .json">⬇ Exportar</button>
+    <button id="btn-importar" class="btn btn-ghost" title="Importar backup em .json">⬆ Importar</button>
+    <input type="file" id="input-importar" accept="application/json" hidden>
+    <span id="status-salvamento" class="save-status">tudo salvo</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="resumo">Resumo</button>
+  <button class="tab-btn" data-tab="paradas">Paradas</button>
+  <button class="tab-btn" data-tab="calendarios">Calendários</button>
+  <button class="tab-btn" data-tab="atividades">Atividades</button>
+  <button class="tab-btn" data-tab="tabela">Tabela</button>
+  <button class="tab-btn" data-tab="gantt">Gantt</button>
+  <button class="tab-btn" data-tab="relatorios">Relatórios</button>
+</nav>
+
+<main id="conteudo">
+
+  <section id="view-resumo" class="view active"></section>
+
+  <section id="view-paradas" class="view">
+    <div class="view-header">
+      <h2>Paradas Programadas</h2>
+      <button id="btn-nova-parada" class="btn btn-primary">+ Nova Parada</button>
+    </div>
+    <div id="lista-paradas" class="cards-grid"></div>
+  </section>
+
+  <section id="view-calendarios" class="view">
+    <div class="view-header">
+      <h2>Calendários</h2>
+      <button id="btn-novo-calendario" class="btn btn-primary">+ Novo Calendário</button>
+    </div>
+    <p class="hint">Um calendário define quantas horas por dia valem como "tempo produtivo" da parada, quais dias da semana são úteis e exceções (feriados, dias com capacidade reduzida). Ele é usado para calcular automaticamente a Data Fim das atividades a partir da duração informada.</p>
+    <div id="lista-calendarios" class="cards-grid"></div>
+  </section>
+
+  <section id="view-atividades" class="view">
+    <div class="view-header">
+      <h2>Atividades e Sub-atividades</h2>
+      <button id="btn-nova-atividade" class="btn btn-primary">+ Nova Atividade</button>
+    </div>
+    <div id="lista-atividades"></div>
+  </section>
+
+  <section id="view-tabela" class="view">
+    <div class="view-header">
+      <h2>Visão em Tabela</h2>
+      <div class="filtros" id="filtros-tabela"></div>
+      <button id="btn-exportar-excel" class="btn btn-secondary">📊 Exportar Excel</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tabela-atividades">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="view-gantt" class="view">
+    <div class="view-header">
+      <h2>Gantt</h2>
+      <div class="gantt-controls">
+        <label>Zoom:
+          <select id="gantt-zoom">
+            <option value="semana" selected>Semana</option>
+            <option value="dia">Dia</option>
+            <option value="hora">Horas</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="gantt-container" class="gantt-container"></div>
+  </section>
+
+  <section id="view-relatorios" class="view">
+    <div class="view-header">
+      <h2>Relatórios</h2>
+    </div>
+    <div class="report-buttons">
+      <button id="btn-rel-simples" class="btn btn-secondary">📄 Relatório Simplificado</button>
+      <button id="btn-rel-completo" class="btn btn-secondary">📋 Relatório Completo / Detalhado</button>
+      <button id="btn-rel-gantt" class="btn btn-secondary">📊 Relatório Gantt</button>
+      <button id="btn-rel-imagens" class="btn btn-secondary">🖼 Relatório com Imagens</button>
+    </div>
+    <div id="relatorio-preview" class="report-preview"></div>
+  </section>
+
+</main>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/utils.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/state.js"></script>
+<script src="js/xlsx-writer.js"></script>
+<script src="js/ui-imagens.js"></script>
+<script src="js/ui-paradas-calendarios.js"></script>
+<script src="js/ui-atividades.js"></script>
+<script src="js/ui-tabela.js"></script>
+<script src="js/ui-gantt.js"></script>
+<script src="js/ui-resumo.js"></script>
+<script src="js/ui-relatorios.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
