@@ -6,11 +6,18 @@ echo  rpttopdf - build automatico
 echo ============================================================
 echo.
 
-where dotnet >nul 2>nul
-if errorlevel 1 (
-    echo [ERRO] .NET SDK nao encontrado nesta maquina.
+set "TEM_SDK="
+for /f "delims=" %%V in ('dotnet --list-sdks 2^>nul') do set "TEM_SDK=1"
+
+if not defined TEM_SDK (
+    echo [ERRO] Nenhum .NET SDK encontrado nesta maquina.
     echo.
-    echo Instale o .NET SDK ^(gratuito^) e rode este build.bat de novo:
+    echo Se o comando "dotnet" existe mas isso ainda aparece, e porque so o
+    echo .NET RUNTIME esta instalado ^(por outro programa^), nao o SDK ^-^-
+    echo sao instaladores diferentes.
+    echo.
+    echo Baixe e instale o ".NET SDK 8.0" ^(nao o "Runtime", nao o
+    echo "ASP.NET Core Runtime"^) e rode este build.bat de novo:
     echo   https://dotnet.microsoft.com/download/dotnet/8.0
     echo.
     echo Isso e so uma ferramenta de compilacao, uma unica vez ^-^-
