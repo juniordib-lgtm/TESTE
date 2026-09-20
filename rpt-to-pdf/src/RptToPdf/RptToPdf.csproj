@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- O SDK do Crystal Reports (CrystalDecisions.*) só é suportado oficialmente
+         em .NET Framework. Não compila e não roda em .NET Core/5+/Linux. -->
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>RptToPdf</RootNamespace>
+    <AssemblyName>rpttopdf</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      Pasta onde estão as DLLs do "SAP Crystal Reports Runtime Engine for
+      .NET Framework" já instalado na máquina. O build.bat na raiz do
+      projeto tenta descobrir esse caminho sozinho e passa via
+      /p:CaminhoRuntimeCR="...". Se preferir, edite o valor padrão abaixo
+      em vez de usar o build.bat.
+    -->
+    <CaminhoRuntimeCR Condition="'$(CaminhoRuntimeCR)' == ''">C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\</CaminhoRuntimeCR>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="CrystalDecisions.CrystalReports.Engine">
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.CrystalReports.Engine.dll</HintPath>
+      <SpecificVersion>false</SpecificVersion>
+    </Reference>
+    <Reference Include="CrystalDecisions.Shared">
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.Shared.dll</HintPath>
+      <SpecificVersion>false</SpecificVersion>
+    </Reference>
+    <Reference Include="CrystalDecisions.ReportAppServer.ClientDoc">
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.ReportAppServer.ClientDoc.dll</HintPath>
+      <SpecificVersion>false</SpecificVersion>
+    </Reference>
+  </ItemGroup>
+
+</Project>
