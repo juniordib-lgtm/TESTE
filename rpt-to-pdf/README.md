@@ -24,28 +24,45 @@ compilação e a execução numa máquina Windows antes de usar em produção.
 
 ## Pré-requisitos
 
-1. **Windows** (10/11 ou Windows Server).
-2. **.NET Framework 4.8 Developer Pack** — https://dotnet.microsoft.com/download/dotnet-framework/net48
-3. **SAP Crystal Reports Runtime Engine for .NET Framework** (a versão
-   "CRRuntime_64bit" ou "CRRuntime_32bit", conforme seu SO):
-   - Baixe em https://help.sap.com/docs/SAP_CRYSTAL_REPORTS_DEVELOPER_VERSION_FOR_VISUAL_STUDIO
-     (procure por "Runtime downloads" / "Redistributable").
-   - Instale antes de compilar o projeto.
-4. Depois de instalado, confira o caminho real das DLLs
-   (`CrystalDecisions.CrystalReports.Engine.dll`,
-   `CrystalDecisions.Shared.dll`, `CrystalDecisions.ReportAppServer.ClientDoc.dll`)
-   e ajuste o `HintPath` em `src/RptToPdf/RptToPdf.csproj` se for diferente
-   do caminho padrão já configurado.
+Na máquina que vai **compilar** (uma vez só):
 
-## Compilar
+1. **Windows** (10/11 ou Windows Server) com o **SAP Crystal Reports
+   Runtime Engine for .NET Framework** já instalado (é o que você usa
+   para abrir/gerar relatórios .rpt normalmente).
+2. **.NET SDK** (gratuito) — https://dotnet.microsoft.com/download/dotnet/8.0
+   — usado só para compilar; não precisa continuar instalado na máquina
+   que vai apenas *rodar* o programa depois.
+
+Na máquina que vai só **rodar** o `rpttopdf.exe` depois de compilado:
+
+- Windows + o mesmo SAP Crystal Reports Runtime Engine instalado.
+  (Não existe forma de ler um `.rpt` de verdade sem esse motor presente
+  — nenhum programa portátil consegue embutir o motor da SAP dentro de
+  um único .exe, porque ele é registrado como componente COM no Windows.)
+
+## Compilar (opção rápida — recomendada)
+
+Dê duplo-clique em `build.bat` (ou rode pelo terminal). Ele:
+
+1. Confere se o `.NET SDK` está instalado.
+2. Procura sozinho a pasta onde o Crystal Reports Runtime instalou as
+   DLLs (`CrystalDecisions.*.dll`).
+3. Compila o projeto.
+4. Copia o resultado para uma pasta `portable/` na raiz do repositório —
+   é só essa pasta (exe + DLLs, sem instalador) que você copia para
+   qualquer outro PC que já tenha o runtime da SAP.
+
+Se ele não achar as DLLs sozinho, rode `build.bat "C:\caminho\onde\estao\as\dll"`
+apontando para a pasta certa, ou edite a propriedade `CaminhoRuntimeCR`
+em `src/RptToPdf/RptToPdf.csproj`.
+
+## Compilar (opção manual)
 
 ```
 dotnet build rpt-to-pdf/RptToPdf.sln -c Release
 ```
 
-(ou abra a `.sln` no Visual Studio e compile por lá — como o SDK do
-Crystal Reports depende fortemente da GAC e de registro no Windows,
-compilar pelo Visual Studio costuma ser mais tranquilo na primeira vez).
+(ou abra a `.sln` no Visual Studio e compile por lá).
 
 ## Usar
 

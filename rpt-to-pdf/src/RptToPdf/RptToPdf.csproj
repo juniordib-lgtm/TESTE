@@ -10,28 +10,28 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <Platforms>AnyCPU;x86;x64</Platforms>
+
+    <!--
+      Pasta onde estão as DLLs do "SAP Crystal Reports Runtime Engine for
+      .NET Framework" já instalado na máquina. O build.bat na raiz do
+      projeto tenta descobrir esse caminho sozinho e passa via
+      /p:CaminhoRuntimeCR="...". Se preferir, edite o valor padrão abaixo
+      em vez de usar o build.bat.
+    -->
+    <CaminhoRuntimeCR Condition="'$(CaminhoRuntimeCR)' == ''">C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\</CaminhoRuntimeCR>
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-      Estas três DLLs vêm da instalação do "SAP Crystal Reports, runtime engine
-      for .NET Framework" (veja o README na raiz do projeto para o link e a versão).
-      Depois de instalado, elas ficam na GAC e também em:
-        C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\
-
-      Ajuste o HintPath abaixo para o caminho real da sua instalação caso o
-      Visual Studio não resolva automaticamente pela GAC.
-    -->
     <Reference Include="CrystalDecisions.CrystalReports.Engine">
-      <HintPath>C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\CrystalDecisions.CrystalReports.Engine.dll</HintPath>
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.CrystalReports.Engine.dll</HintPath>
       <SpecificVersion>false</SpecificVersion>
     </Reference>
     <Reference Include="CrystalDecisions.Shared">
-      <HintPath>C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\CrystalDecisions.Shared.dll</HintPath>
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.Shared.dll</HintPath>
       <SpecificVersion>false</SpecificVersion>
     </Reference>
     <Reference Include="CrystalDecisions.ReportAppServer.ClientDoc">
-      <HintPath>C:\Program Files (x86)\SAP BusinessObjects\Crystal Reports for .NET Framework 4.0\Common\SAP BusinessObjects Enterprise XI 4.0\win32_x86\dotnet\CrystalDecisions.ReportAppServer.ClientDoc.dll</HintPath>
+      <HintPath>$(CaminhoRuntimeCR)CrystalDecisions.ReportAppServer.ClientDoc.dll</HintPath>
       <SpecificVersion>false</SpecificVersion>
     </Reference>
   </ItemGroup>
