@@ -56,6 +56,11 @@ Se ele não achar as DLLs sozinho, rode `build.bat "C:\caminho\onde\estao\as\dll
 apontando para a pasta certa, ou edite a propriedade `CaminhoRuntimeCR`
 em `src/RptToPdf/RptToPdf.csproj`.
 
+O script agora **procura o `rpttopdf.exe` gerado** em vez de assumir um
+caminho fixo, e só declara sucesso depois de confirmar que o `.exe` está
+de fato dentro de `portable/`. Se algo der errado, ele imprime o motivo
+em vez de terminar com uma pasta vazia.
+
 ## Compilar (opção manual)
 
 ```

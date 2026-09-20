@@ -21,15 +21,19 @@ if errorlevel 1 (
 
 echo Procurando a instalacao do SAP Crystal Reports Runtime...
 set "CAMINHO_CR="
-for %%D in (
-    "C:\Program Files (x86)\SAP BusinessObjects"
-    "C:\Program Files\SAP BusinessObjects"
-    "C:\Program Files (x86)\Business Objects"
-    "C:\Program Files\Business Objects"
-) do (
-    if exist "%%~D" (
-        for /f "delims=" %%F in ('dir /s /b "%%~D\CrystalDecisions.CrystalReports.Engine.dll" 2^>nul') do (
-            if "!CAMINHO_CR!"=="" set "CAMINHO_CR=%%~dpF"
+if not "%~1"=="" set "CAMINHO_CR=%~1"
+
+if "%CAMINHO_CR%"=="" (
+    for %%D in (
+        "C:\Program Files (x86)\SAP BusinessObjects"
+        "C:\Program Files\SAP BusinessObjects"
+        "C:\Program Files (x86)\Business Objects"
+        "C:\Program Files\Business Objects"
+    ) do (
+        if "!CAMINHO_CR!"=="" if exist "%%~D" (
+            for /f "delims=" %%F in ('dir /s /b "%%~D\CrystalDecisions.CrystalReports.Engine.dll" 2^>nul') do (
+                if "!CAMINHO_CR!"=="" set "CAMINHO_CR=%%~dpF"
+            )
         )
     )
 )
@@ -40,18 +44,23 @@ if "%CAMINHO_CR%"=="" (
     echo Se falhar, edite "CaminhoRuntimeCR" em src\RptToPdf\RptToPdf.csproj
     echo com o caminho real, ou rode:
     echo   build.bat "C:\caminho\onde\estao\as\dll"
-    echo.
-    if not "%~1"=="" set "CAMINHO_CR=%~1"
 ) else (
     echo Encontrado em: %CAMINHO_CR%
 )
 
+set "PROJETO=%~dp0src\RptToPdf\RptToPdf.csproj"
+set "BINRAIZ=%~dp0src\RptToPdf\bin"
+
+echo.
+echo Limpando builds antigos ^(evita copiar um .exe desatualizado^)...
+if exist "%BINRAIZ%" rmdir /s /q "%BINRAIZ%"
+
 echo.
 echo Compilando ^(Release^)...
 if "%CAMINHO_CR%"=="" (
-    dotnet build "%~dp0src\RptToPdf\RptToPdf.csproj" -c Release
+    dotnet build "%PROJETO%" -c Release
 ) else (
-    dotnet build "%~dp0src\RptToPdf\RptToPdf.csproj" -c Release /p:CaminhoRuntimeCR="%CAMINHO_CR%"
+    dotnet build "%PROJETO%" -c Release /p:CaminhoRuntimeCR="%CAMINHO_CR%"
 )
 
 if errorlevel 1 (
@@ -62,14 +71,42 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "SAIDA=%~dp0src\RptToPdf\bin\Release\net48"
-set "PORTATIL=%~dp0portable"
+echo.
+echo Procurando o rpttopdf.exe gerado...
+set "SAIDA="
+for /f "delims=" %%F in ('dir /s /b "%BINRAIZ%\rpttopdf.exe" 2^>nul') do (
+    if "!SAIDA!"=="" set "SAIDA=%%~dpF"
+)
 
+if "%SAIDA%"=="" (
+    echo.
+    echo [ERRO] O build terminou sem erro, mas rpttopdf.exe nao foi encontrado
+    echo dentro de "%BINRAIZ%".
+    echo Isso normalmente significa que o build compilou algo diferente do
+    echo esperado. Rode manualmente para ver a saida completa:
+    echo   dotnet build "%PROJETO%" -c Release
+    echo e procure a linha que comeca com "rpttopdf -^> " para achar onde
+    echo o .exe realmente foi parar.
+    pause
+    exit /b 1
+)
+
+echo Encontrado em: %SAIDA%
+
+set "PORTATIL=%~dp0portable"
 echo.
 echo Montando pasta portatil em: %PORTATIL%
 if exist "%PORTATIL%" rmdir /s /q "%PORTATIL%"
 mkdir "%PORTATIL%"
-xcopy "%SAIDA%\*" "%PORTATIL%\" /e /i /y >nul
+xcopy "%SAIDA%*" "%PORTATIL%\" /e /i /y
+
+if not exist "%PORTATIL%\rpttopdf.exe" (
+    echo.
+    echo [ERRO] A copia falhou: rpttopdf.exe nao esta em "%PORTATIL%".
+    echo Copie manualmente os arquivos de "%SAIDA%" para "%PORTATIL%".
+    pause
+    exit /b 1
+)
 
 echo.
 echo ============================================================
